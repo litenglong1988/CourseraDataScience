@@ -1,0 +1,131 @@
+ 
+ 
+# Whether severe weather events can cause both public health and economic problems 
+ 
+ 
+## Synopsis 
+ 
+ 
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. The data for this assignment come in the form of a comma-separated-value file compressed via the bzip2 algorithm to reduce its size. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage. 
+ 
+ 
+## Questions 
+ 
+ 
+1.Across the United States, which types of events are most harmful with respect to population health? 
+
+ 
+2.Across the United States, which types of events have the greatest economic consequences? 
+
+ 
+```{r echo=FALSE} 
+library(knitr)
+opts_chunk$set(cache=TRUE, cache.path = 'Peerassessment2_cache/', fig.path='figure/') 
+``` 
+
+
+## Data Processing  
+
+ 
+Frist reading the data and use **str()** function 
+
+ 
+```{r echo=TRUE,cache = TRUE} 
+storm <- read.csv("storm_data.csv.bz2") 
+str(storm) 
+``` 
+
+ 
+The PROPDMGEXP and CROPDMGEXP variables in the dataset have these unique values: 
+ 
+ 
+```{r echo=TRUE} 
+unique(storm$PROPDMGEXP) 
+unique(storm$CROPDMGEXP) 
+``` 
+
+ 
+Convert the PROPDMGEXP and CROPDMGEXP variables into numerical values 
+ 
+```{r echo=TRUE, cache=TRUE, results='hide'} 
+storm$PROPEXP[storm$PROPDMGEXP == "K"] <- 1000 
+storm$PROPEXP[storm$PROPDMGEXP == "M"] <- 1e+06 
+storm$PROPEXP[storm$PROPDMGEXP == ""] <- 1 
+storm$PROPEXP[storm$PROPDMGEXP == "B"] <- 1e+09 
+storm$PROPEXP[storm$PROPDMGEXP == "m"] <- 1e+06 
+storm$PROPEXP[storm$PROPDMGEXP == "0"] <- 1 
+storm$PROPEXP[storm$PROPDMGEXP == "5"] <- 1e+05 
+storm$PROPEXP[storm$PROPDMGEXP == "6"] <- 1e+06 
+storm$PROPEXP[storm$PROPDMGEXP == "4"] <- 10000 
+storm$PROPEXP[storm$PROPDMGEXP == "2"] <- 100 
+storm$PROPEXP[storm$PROPDMGEXP == "3"] <- 1000 
+storm$PROPEXP[storm$PROPDMGEXP == "h"] <- 100 
+storm$PROPEXP[storm$PROPDMGEXP == "7"] <- 1e+07 
+storm$PROPEXP[storm$PROPDMGEXP == "H"] <- 100 
+storm$PROPEXP[storm$PROPDMGEXP == "1"] <- 10 
+storm$PROPEXP[storm$PROPDMGEXP == "8"] <- 1e+08 
+storm$PROPEXP[storm$PROPDMGEXP == "+"] <- 0 
+storm$PROPEXP[storm$PROPDMGEXP == "-"] <- 0 
+storm$PROPEXP[storm$PROPDMGEXP == "?"] <- 0 
+storm$CROPEXP[storm$CROPDMGEXP == "M"] <- 1e+06 
+storm$CROPEXP[storm$CROPDMGEXP == "K"] <- 1000 
+storm$CROPEXP[storm$CROPDMGEXP == "m"] <- 1e+06 
+storm$CROPEXP[storm$CROPDMGEXP == "B"] <- 1e+09 
+storm$CROPEXP[storm$CROPDMGEXP == "0"] <- 1 
+storm$CROPEXP[storm$CROPDMGEXP == "k"] <- 1000 
+storm$CROPEXP[storm$CROPDMGEXP == "2"] <- 100 
+storm$CROPEXP[storm$CROPDMGEXP == ""] <- 1 
+storm$CROPEXP[storm$CROPDMGEXP == "?"] <- 0 
+``` 
+
+ 
+```{r echo=TRUE, cache=TRUE, results='hide'} 
+storm$PROPDMGVAL <- storm$PROPDMG * storm$PROPEXP 
+storm$CROPDMGVAL <- storm$CROPDMG * storm$CROPEXP 
+``` 
+
+Gggregate the data by event 
+
+ 
+```{r echo=TRUE, cache=TRUE, results='hide'} 
+fatal <- aggregate(FATALITIES ~ EVTYPE, data = storm, FUN = sum) 
+injury <- aggregate(INJURIES ~ EVTYPE, data = storm, FUN = sum) 
+``` 
+
+ 
+## Results 
+ 
+ 
+- Q1: Aross the United States, Which types of events are most harmful with respect to population health? 
+ 
+
+```{r echo=TRUE,cache = TRUE, results='hide', warning=FALSE} 
+library(ggplot2) 
+library(gridExtra) 
+``` 
+
+ 
+```{r echo=TRUE,cache = TRUE} 
+fatal <- fatal[order(-fatal$FATALITIES), ][1:10, ] 
+injury <- injury[order(-injury$INJURIES), ][1:10, ] 
+a <- ggplot(data=fatal, aes(EVTYPE ,FATALITIES)) + geom_bar(stat="identity", fill="blue") + ggtitle("Weather Events With The Top 10 Highest Injuries") + ylab("value of injuries") + theme(axis.text.x = element_text(angle = 90, hjust = 1), title =element_text(size=8))  
+b <- ggplot(data=injury, aes(EVTYPE ,injury$INJURIES)) + geom_bar(stat="identity", fill="green") + ggtitle("Weather Events With The Top 10 Highest Fatalities") + ylab("value of fatalities") + theme(axis.text.x = element_text(angle = 90, hjust = 1), title =element_text(size=8))  
+grid.arrange(a, b ,ncol=2, main="Storm Events and Population Health" ) 
+``` 
+
+ 
+So, The most harmful weather event to population health is **Tornado**. 
+ 
+ 
+- Q2: Across the United States, which types of events have the greatest economic consequences? 
+ 
+ 
+```{r echo=TRUE,cache = TRUE} 
+storm$damage <- storm$PROPDMGVAL + storm$CROPDMGVAL 
+totaldamage <- aggregate(damage ~ EVTYPE, data = storm, FUN = sum) 
+totaldamage <- totaldamage[order(-totaldamage$damage), ][1:10, ] 
+ggplot(data=totaldamage, aes(EVTYPE ,damage)) + geom_bar(stat="identity", fill="red") + ggtitle("Event type with the biggest economic impact.") + ylab("economical damage") + theme(axis.text.x = element_text(angle = 90, hjust = 1))  
+``` 
+
+ 
+So, The biggest impact event type to the  economic impact is **FLOOD**.  
